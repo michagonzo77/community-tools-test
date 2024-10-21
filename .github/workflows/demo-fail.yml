@@ -1,39 +1,38 @@
 name: Fail Job with Notification
-
 on:
   push:
     branches:
       - main
-
 jobs:
   fail-job:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-
       - name: Force failure
         run: |
           echo "Simulating failure..."
           exit 1
         id: failure-step
-
       - name: Capture logs
         if: failure()
         run: |
           echo "Capturing logs from failure..."
-          LOGS=$(tail -n 50 /var/log/syslog)
-          echo "Logs: $LOGS"
+          LOGS=$(cat $GITHUB_STEP_SUMMARY)
           echo "::set-output name=logs::$LOGS"
         id: capture-logs
-
+    outputs:
+      logs: ${{ steps.capture-logs.outputs.logs }}
+  
   failure-notification:
     runs-on: ubuntu-latest
     needs: fail-job
     if: failure()
     steps:
       - name: Send failure notification to webhook
+        env:
+          LOGS: ${{ needs.fail-job.outputs.logs }}
         run: |
           curl -X POST -H "Content-Type: application/json" \
-          -d "{\"text\": \"GitHub Action failed in fail-job. Logs: ${{ needs.fail-job.outputs.logs }}\"}" \
+          -d "{\"text\": \"GitHub Action failed in fail-job. Logs: $LOGS\"}" \
           https://webhooksource-kubiya.hooks.kubiya.ai:8443/NFg08dN_1RNBZ-MP4M5fClwTEuCcyFoDttLQTj8xgOnSCbtqLPhuVfHkWnvXiKXlroILiWVL237h2yuyBeg7KA==
