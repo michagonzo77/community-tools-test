@@ -1,0 +1,5 @@
+flask==2.0.1
+pytest==6.2.5
+# Conflicting dependencies
+requests==2.25.1
+urllib3==1.26.7
