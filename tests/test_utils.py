@@ -1,9 +1,12 @@
 import pytest
+from utils import calculate_discount
 
-def test_utility_function():
-    result = 2 + 2
-    assert result == 4, "Basic math should work"
+def test_calculate_discount():
+    assert calculate_discount(100, 20) == 80
+    assert calculate_discount(50, 10) == 45
 
-def test_utility_function_error():
-    with pytest.raises(ZeroDivisionError):
-        1 / 0
+def test_calculate_discount_edge_cases():
+    with pytest.raises(ValueError):
+        calculate_discount(100, -10)
+    with pytest.raises(ValueError):
+        calculate_discount(-100, 20)
