@@ -23,3 +23,12 @@ jobs:
 
       - name: Run failing script
         run: exit 1 # Force a failure
+
+  failure-notification:
+    if: failure() # This ensures the job only runs when the previous jobs failed
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send failure log to webhook
+        run: |
+          LOGS=$(gh run view --job fail-job --log)
+          curl -X POST -H "Content-Type: application/json" -d "{\"text\":\"$LOGS\"}" https://webhooksource-kubiya.hooks.kubiya.ai:8443/NFg08dN_1RNBZ-MP4M5fClwTEuCcyFoDttLQTj8xgOnSCbtqLPhuVfHkWnvXiKXlroILiWVL237h2yuyBeg7KA==
