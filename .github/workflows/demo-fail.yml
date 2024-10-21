@@ -11,18 +11,22 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
+        continue-on-error: true # Continue even if this fails
 
       - name: Set up Node.js
         uses: actions/setup-node@v2
         with:
           node-version: '16'
+        continue-on-error: true # Continue even if this fails
 
       - name: Install dependencies
         run: npm install
         working-directory: ./non-existent-directory # This will fail because the directory doesn't exist
+        continue-on-error: true # Continue even if this fails
 
       - name: Run failing script
         run: exit 1 # Force a failure
+        continue-on-error: true # Continue even if this fails
 
   failure-notification:
     if: failure() # This ensures the job only runs when the previous jobs failed
