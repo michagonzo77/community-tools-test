@@ -21,36 +21,39 @@ jobs:
         if: always()
         run: |
           echo "Capturing logs..."
-          echo "GITHUB_WORKFLOW: $GITHUB_WORKFLOW"
-          echo "GITHUB_ACTION: $GITHUB_ACTION"
-          echo "GITHUB_EVENT_NAME: $GITHUB_EVENT_NAME"
-          echo "GITHUB_SHA: $GITHUB_SHA"
-          echo "GITHUB_REF: $GITHUB_REF"
-          echo "GITHUB_STEP_SUMMARY content:"
-          cat $GITHUB_STEP_SUMMARY
-          echo "Job outputs:"
-          echo "${{ toJson(steps) }}"
-          LOGS=$(cat $GITHUB_STEP_SUMMARY)
-          echo "logs=$LOGS" >> $GITHUB_OUTPUT
-        id: capture-logs
-    
-    outputs:
-      logs: ${{ steps.capture-logs.outputs.logs }}
+          {
+            echo "GITHUB_WORKFLOW: $GITHUB_WORKFLOW"
+            echo "GITHUB_ACTION: $GITHUB_ACTION"
+            echo "GITHUB_EVENT_NAME: $GITHUB_EVENT_NAME"
+            echo "GITHUB_SHA: $GITHUB_SHA"
+            echo "GITHUB_REF: $GITHUB_REF"
+            echo "Step outputs:"
+            echo "${{ toJson(steps) }}"
+          } > job_logs.txt
+      
+      - name: Upload logs as artifact
+        if: always()
+        uses: actions/upload-artifact@v2
+        with:
+          name: job-logs
+          path: job_logs.txt
   
   failure-notification:
     runs-on: ubuntu-latest
     needs: fail-job
     if: always()
     steps:
-      - name: Debug output
-        run: |
-          echo "Logs from previous job: ${{ needs.fail-job.outputs.logs }}"
+      - name: Download logs artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: job-logs
       
-      - name: Send failure notification to webhook
-        env:
-          LOGS: ${{ needs.fail-job.outputs.logs }}
+      - name: Read logs and send notification
         run: |
-          echo "Sending notification with logs: $LOGS"
+          LOGS=$(cat job_logs.txt)
+          echo "Logs content:"
+          echo "$LOGS"
+          ESCAPED_LOGS=$(echo "$LOGS" | jq -sRr @json)
           curl -X POST -H "Content-Type: application/json" \
-          -d "{\"text\": \"GitHub Action failed in fail-job. Logs: $LOGS\"}" \
+          -d "{\"text\": \"GitHub Action failed in fail-job. Logs: $ESCAPED_LOGS\"}" \
           https://webhooksource-kubiya.hooks.kubiya.ai:8443/NFg08dN_1RNBZ-MP4M5fClwTEuCcyFoDttLQTj8xgOnSCbtqLPhuVfHkWnvXiKXlroILiWVL237h2yuyBeg7KA==
