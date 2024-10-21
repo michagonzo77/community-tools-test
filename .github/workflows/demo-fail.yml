@@ -30,8 +30,8 @@ jobs:
       - name: Install GitHub CLI
         run: sudo apt-get install -y gh
 
-      - name: Send failure log to webhook
+      - name: Send basic failure notification to webhook
         run: |
-          LOGS=$(gh run view --log)
-          echo "Logs: $LOGS"
-          curl -X POST -H "Content-Type: application/json" -d "{\"text\":\"$LOGS\"}" https://webhooksource-kubiya.hooks.kubiya.ai:8443/NFg08dN_1RNBZ-MP4M5fClwTEuCcyFoDttLQTj8xgOnSCbtqLPhuVfHkWnvXiKXlroILiWVL237h2yuyBeg7KA==
+          curl -X POST -H "Content-Type: application/json" \
+          -d "{\"text\":\"GitHub Action failed in job\"}" \
+          https://webhooksource-kubiya.hooks.kubiya.ai:8443/NFg08dN_1RNBZ-MP4M5fClwTEuCcyFoDttLQTj8xgOnSCbtqLPhuVfHkWnvXiKXlroILiWVL237h2yuyBeg7KA==
