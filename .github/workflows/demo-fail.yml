@@ -54,19 +54,48 @@ jobs:
           echo "Logs content (first 500 characters):"
           echo "${LOGS:0:500}"
           
-          # Truncate logs to 1000 characters
-          TRUNCATED_LOGS="${LOGS:0:1000}..."
+          # Truncate logs to 2000 characters
+          TRUNCATED_LOGS="${LOGS:0:2000}..."
           ESCAPED_LOGS=$(echo "$TRUNCATED_LOGS" | jq -sRr @json)
           
-          echo "Sending truncated payload to webhook:"
-          curl -v -X POST -H "Content-Type: application/json" \
-          -d "{\"text\": \"GitHub Action failed in fail-job. Truncated Logs: $ESCAPED_LOGS\"}" \
-          https://webhooksource-kubiya.hooks.kubiya.ai:8443/NFg08dN_1RNBZ-MP4M5fClwTEuCcyFoDttLQTj8xgOnSCbtqLPhuVfHkWnvXiKXlroILiWVL237h2yuyBeg7KA== > webhook_response.txt
-          
-          echo "Webhook Response:"
-          cat webhook_response.txt
-          
-          echo "Curl exit code: $?"
+          # Prepare payload with metadata
+          PAYLOAD=$(jq -n \
+                      --arg status "${{ job.status }}" \
+                      --arg repo "$GITHUB_REPOSITORY" \
+                      --arg workflow "$GITHUB_WORKFLOW" \
+                      --arg commit "$GITHUB_SHA" \
+                      --arg logs "$ESCAPED_LOGS" \
+                      '{status: $status, repository: $repo, workflow: $workflow, commit: $commit, logs: $logs}')
           
           echo "Payload size (bytes):"
-          echo -n "{\"text\": \"GitHub Action failed in fail-job. Truncated Logs: $ESCAPED_LOGS\"}" | wc -c
+          echo -n "$PAYLOAD" | wc -c
+          
+          # Function to send webhook with retry logic
+          send_webhook() {
+            for i in {1..3}; do
+              HTTP_RESPONSE=$(curl -s -o response.txt -w "%{http_code}" -X POST -H "Content-Type: application/json" \
+                -d "$PAYLOAD" \
+                https://webhooksource-kubiya.hooks.kubiya.ai:8443/NFg08dN_1RNBZ-MP4M5fClwTEuCcyFoDttLQTj8xgOnSCbtqLPhuVfHkWnvXiKXlroILiWVL237h2yuyBeg7KA==)
+              
+              if [ "$HTTP_RESPONSE" -eq 204 ]; then
+                echo "Webhook sent successfully"
+                echo "Response body:"
+                cat response.txt
+                return 0
+              fi
+              
+              echo "Attempt $i failed with HTTP status $HTTP_RESPONSE. Retrying in 5 seconds..."
+              sleep 5
+            done
+            
+            echo "All attempts to send webhook failed"
+            return 1
+          }
+          
+          # Send webhook
+          if send_webhook; then
+            echo "Notification sent successfully"
+          else
+            echo "Failed to send notification"
+            exit 1
+          fi
