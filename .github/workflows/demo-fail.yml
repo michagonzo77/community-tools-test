@@ -17,19 +17,19 @@ jobs:
           echo "This is going to fail"
           exit 1  # Exiting with a non-zero status code to force failure
 
-      - name: Upload logs to artifacts
+      - name: Capture logs
         if: failure()
         run: |
           echo "Capturing failure logs..."
-          dmesg > logs.txt
+          dmesg | tail -n 50 > failure_logs.txt
         id: capture-logs
 
       - name: Upload logs artifact
         if: failure()
         uses: actions/upload-artifact@v3
         with:
-          name: logs
-          path: logs.txt
+          name: failure_logs
+          path: failure_logs.txt
 
   failure-notification:
     runs-on: ubuntu-latest
@@ -39,11 +39,13 @@ jobs:
       - name: Download logs artifact
         uses: actions/download-artifact@v3
         with:
-          name: logs
+          name: failure_logs
 
       - name: Read logs
+        id: read-logs
         run: |
-          LOGS=$(cat logs.txt)
+          LOGS=$(cat failure_logs.txt)
+          echo "$LOGS"
           echo "::set-output name=logs::$LOGS"
 
       - name: Send failure notification to webhook
