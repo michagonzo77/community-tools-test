@@ -1,9 +1,9 @@
-name: Demo Workflow Fail
+name: Fail Job with Notification
 
 on:
   push:
     branches:
-      - main
+      - main  # This will trigger on pushes to the main branch
 
 jobs:
   fail-job:
@@ -11,27 +11,19 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-        continue-on-error: true # Continue even if this step fails
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v2
-        with:
-          node-version: '16'
-        continue-on-error: true # Continue even if this step fails
-
-      - name: Intentionally fail the job
-        run: exit 1 # Force a failure
-        continue-on-error: true # Continue even if this step fails
+      - name: Force failure
+        run: |
+          echo "This is going to fail"
+          exit 1  # Exiting with a non-zero status code to force failure
 
   failure-notification:
-    if: failure() # Ensure this job only runs when any previous step fails
     runs-on: ubuntu-latest
+    needs: fail-job  # This ensures that this job only runs after 'fail-job'
+    if: failure()    # Runs only if the 'fail-job' fails
     steps:
-      - name: Install GitHub CLI
-        run: sudo apt-get install -y gh
-
-      - name: Send basic failure notification to webhook
+      - name: Send failure notification to webhook
         run: |
           curl -X POST -H "Content-Type: application/json" \
-          -d "{\"text\":\"GitHub Action failed in job\"}" \
+          -d "{\"text\":\"GitHub Action failed in fail-job\"}" \
           https://webhooksource-kubiya.hooks.kubiya.ai:8443/NFg08dN_1RNBZ-MP4M5fClwTEuCcyFoDttLQTj8xgOnSCbtqLPhuVfHkWnvXiKXlroILiWVL237h2yuyBeg7KA==
