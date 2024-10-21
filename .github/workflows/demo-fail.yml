@@ -48,25 +48,25 @@ jobs:
         with:
           name: job-logs
       
-      - name: Read logs and send notification
+      - name: Process logs and send notification
         run: |
           LOGS=$(cat job_logs.txt)
-          echo "Logs content:"
-          echo "$LOGS"
-          ESCAPED_LOGS=$(echo "$LOGS" | jq -sRr @json)
+          echo "Logs content (first 500 characters):"
+          echo "${LOGS:0:500}"
           
-          echo "Sending full payload to webhook:"
+          # Truncate logs to 1000 characters
+          TRUNCATED_LOGS="${LOGS:0:1000}..."
+          ESCAPED_LOGS=$(echo "$TRUNCATED_LOGS" | jq -sRr @json)
+          
+          echo "Sending truncated payload to webhook:"
           curl -v -X POST -H "Content-Type: application/json" \
-          -d "{\"text\": \"GitHub Action failed in fail-job. Logs: $ESCAPED_LOGS\"}" \
-          https://webhooksource-kubiya.hooks.kubiya.ai:8443/NFg08dN_1RNBZ-MP4M5fClwTEuCcyFoDttLQTj8xgOnSCbtqLPhuVfHkWnvXiKXlroILiWVL237h2yuyBeg7KA== > webhook_response_full.txt
+          -d "{\"text\": \"GitHub Action failed in fail-job. Truncated Logs: $ESCAPED_LOGS\"}" \
+          https://webhooksource-kubiya.hooks.kubiya.ai:8443/NFg08dN_1RNBZ-MP4M5fClwTEuCcyFoDttLQTj8xgOnSCbtqLPhuVfHkWnvXiKXlroILiWVL237h2yuyBeg7KA== > webhook_response.txt
           
-          echo "Webhook Response (Full Payload):"
-          cat webhook_response_full.txt
+          echo "Webhook Response:"
+          cat webhook_response.txt
           
-          echo "Sending simplified payload to webhook:"
-          curl -v -X POST -H "Content-Type: application/json" \
-          -d "{\"text\": \"Test message from GitHub Action\"}" \
-          https://webhooksource-kubiya.hooks.kubiya.ai:8443/NFg08dN_1RNBZ-MP4M5fClwTEuCcyFoDttLQTj8xgOnSCbtqLPhuVfHkWnvXiKXlroILiWVL237h2yuyBeg7KA== > webhook_response_simple.txt
+          echo "Curl exit code: $?"
           
-          echo "Webhook Response (Simplified Payload):"
-          cat webhook_response_simple.txt
+          echo "Payload size (bytes):"
+          echo -n "{\"text\": \"GitHub Action failed in fail-job. Truncated Logs: $ESCAPED_LOGS\"}" | wc -c
