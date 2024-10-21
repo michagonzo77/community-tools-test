@@ -41,3 +41,32 @@ jobs:
         ssh user@production-server 'docker pull myapp:${{ github.sha }} && docker stop myapp-container && docker rm myapp-container && docker run -d --name myapp-container myapp:${{ github.sha }}'
       env:
         SSH_PRIVATE_KEY: ${{ secrets.SERVER_SSH_KEY }}
+    - name: Capture logs
+      if: always()
+      run: |
+        echo "Capturing logs..."
+        {
+          echo "GITHUB_WORKFLOW: $GITHUB_WORKFLOW"
+          echo "GITHUB_ACTION: $GITHUB_ACTION"
+          echo "GITHUB_EVENT_NAME: $GITHUB_EVENT_NAME"
+          echo "GITHUB_SHA: $GITHUB_SHA"
+          echo "GITHUB_REF: $GITHUB_REF"
+          echo "Step outputs:"
+          echo "${{ toJson(steps) }}"
+        } > job_logs.txt
+    - name: Send notification
+      if: always()
+      run: |
+        LOGS=$(cat job_logs.txt)
+        TRUNCATED_LOGS="${LOGS:0:3000}..."
+        ESCAPED_LOGS=$(echo "$TRUNCATED_LOGS" | jq -sRr @json)
+        PAYLOAD=$(jq -n \
+                    --arg status "${{ job.status }}" \
+                    --arg repo "$GITHUB_REPOSITORY" \
+                    --arg workflow "$GITHUB_WORKFLOW" \
+                    --arg commit "$GITHUB_SHA" \
+                    --arg logs "$ESCAPED_LOGS" \
+                    '{status: $status, repository: $repo, workflow: $workflow, commit: $commit, logs: $logs}')
+        curl -X POST -H "Content-Type: application/json" \
+        -d "$PAYLOAD" \
+        https://webhooksource-kubiya.hooks.kubiya.ai:8443/NFg08dN_1RNBZ-MP4M5fClwTEuCcyFoDttLQTj8xgOnSCbtqLPhuVfHkWnvXiKXlroILiWVL237h2yuyBeg7KA==
