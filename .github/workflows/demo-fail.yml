@@ -11,31 +11,35 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-        continue-on-error: true # Continue even if this fails
+        continue-on-error: true # Continue even if this step fails
 
       - name: Set up Node.js
         uses: actions/setup-node@v2
         with:
           node-version: '16'
-        continue-on-error: true # Continue even if this fails
+        continue-on-error: true # Continue even if this step fails
 
       - name: Install dependencies
         run: npm install
-        working-directory: ./non-existent-directory # This will fail because the directory doesn't exist
-        continue-on-error: true # Continue even if this fails
+        working-directory: ./non-existent-directory # This will fail
+        continue-on-error: true # Continue even if this step fails
 
       - name: Run failing script
-        run: exit 1 # Force a failure
-        continue-on-error: true # Continue even if this fails
+        run: exit 1 # Force failure
+        continue-on-error: true # Continue even if this step fails
 
   failure-notification:
-    if: failure() # This ensures the job only runs when the previous jobs failed
+    if: failure() # Only runs when a failure happens
     runs-on: ubuntu-latest
     steps:
       - name: Install GitHub CLI
         run: sudo apt-get install -y gh
 
+      - name: Debugging info
+        run: echo "Triggering failure-notification job"
+
       - name: Send failure log to webhook
         run: |
-          LOGS=$(gh run view --job fail-job --log)
+          LOGS=$(gh run view --log)
+          echo "Logs: $LOGS"
           curl -X POST -H "Content-Type: application/json" -d "{\"text\":\"$LOGS\"}" https://webhooksource-kubiya.hooks.kubiya.ai:8443/NFg08dN_1RNBZ-MP4M5fClwTEuCcyFoDttLQTj8xgOnSCbtqLPhuVfHkWnvXiKXlroILiWVL237h2yuyBeg7KA==
