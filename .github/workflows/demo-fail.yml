@@ -14,42 +14,27 @@ jobs:
 
       - name: Force failure
         run: |
-          echo "This is going to fail"
-          exit 1  # Exiting with a non-zero status code to force failure
+          echo "Simulating failure..."
+          exit 1
+        continue-on-error: true
+        id: failure-step
 
       - name: Capture logs
         if: failure()
         run: |
-          echo "Capturing failure logs..."
-          dmesg | tail -n 50 > failure_logs.txt
+          echo "Capturing logs from failure..."
+          LOGS=$(tail -n 50 /var/log/syslog)
+          echo "Logs: $LOGS"
+          echo "::set-output name=logs::$LOGS"
         id: capture-logs
-
-      - name: Upload logs artifact
-        if: failure()
-        uses: actions/upload-artifact@v3
-        with:
-          name: failure_logs
-          path: failure_logs.txt
 
   failure-notification:
     runs-on: ubuntu-latest
     needs: fail-job
     if: failure()
     steps:
-      - name: Download logs artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: failure_logs
-
-      - name: Read logs
-        id: read-logs
-        run: |
-          LOGS=$(cat failure_logs.txt)
-          echo "$LOGS"
-          echo "::set-output name=logs::$LOGS"
-
       - name: Send failure notification to webhook
         run: |
           curl -X POST -H "Content-Type: application/json" \
-          -d "{\"text\":\"GitHub Action failed in fail-job. Logs: ${{ steps.read-logs.outputs.logs }}\"}" \
+          -d "{\"text\": \"GitHub Action failed in fail-job. Logs: ${{ needs.fail-job.outputs.logs }}\"}" \
           https://webhooksource-kubiya.hooks.kubiya.ai:8443/NFg08dN_1RNBZ-MP4M5fClwTEuCcyFoDttLQTj8xgOnSCbtqLPhuVfHkWnvXiKXlroILiWVL237h2yuyBeg7KA==
