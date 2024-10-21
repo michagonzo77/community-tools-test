@@ -54,6 +54,19 @@ jobs:
           echo "Logs content:"
           echo "$LOGS"
           ESCAPED_LOGS=$(echo "$LOGS" | jq -sRr @json)
-          curl -X POST -H "Content-Type: application/json" \
+          
+          echo "Sending full payload to webhook:"
+          curl -v -X POST -H "Content-Type: application/json" \
           -d "{\"text\": \"GitHub Action failed in fail-job. Logs: $ESCAPED_LOGS\"}" \
-          https://webhooksource-kubiya.hooks.kubiya.ai:8443/NFg08dN_1RNBZ-MP4M5fClwTEuCcyFoDttLQTj8xgOnSCbtqLPhuVfHkWnvXiKXlroILiWVL237h2yuyBeg7KA==
+          https://webhooksource-kubiya.hooks.kubiya.ai:8443/NFg08dN_1RNBZ-MP4M5fClwTEuCcyFoDttLQTj8xgOnSCbtqLPhuVfHkWnvXiKXlroILiWVL237h2yuyBeg7KA== > webhook_response_full.txt
+          
+          echo "Webhook Response (Full Payload):"
+          cat webhook_response_full.txt
+          
+          echo "Sending simplified payload to webhook:"
+          curl -v -X POST -H "Content-Type: application/json" \
+          -d "{\"text\": \"Test message from GitHub Action\"}" \
+          https://webhooksource-kubiya.hooks.kubiya.ai:8443/NFg08dN_1RNBZ-MP4M5fClwTEuCcyFoDttLQTj8xgOnSCbtqLPhuVfHkWnvXiKXlroILiWVL237h2yuyBeg7KA== > webhook_response_simple.txt
+          
+          echo "Webhook Response (Simplified Payload):"
+          cat webhook_response_simple.txt
