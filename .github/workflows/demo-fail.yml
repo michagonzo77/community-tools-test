@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       
       - name: Force failure
         run: |
@@ -33,7 +33,7 @@ jobs:
       
       - name: Upload logs as artifact
         if: always()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: job-logs
           path: job_logs.txt
@@ -44,7 +44,7 @@ jobs:
     if: always()
     steps:
       - name: Download logs artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: job-logs
       
