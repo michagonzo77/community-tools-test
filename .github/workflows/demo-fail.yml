@@ -9,30 +9,48 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
+      
       - name: Force failure
         run: |
           echo "Simulating failure..."
+          echo "This is a debug message before failure" >&2
           exit 1
         id: failure-step
+      
       - name: Capture logs
-        if: failure()
+        if: always()
         run: |
-          echo "Capturing logs from failure..."
+          echo "Capturing logs..."
+          echo "GITHUB_WORKFLOW: $GITHUB_WORKFLOW"
+          echo "GITHUB_ACTION: $GITHUB_ACTION"
+          echo "GITHUB_EVENT_NAME: $GITHUB_EVENT_NAME"
+          echo "GITHUB_SHA: $GITHUB_SHA"
+          echo "GITHUB_REF: $GITHUB_REF"
+          echo "GITHUB_STEP_SUMMARY content:"
+          cat $GITHUB_STEP_SUMMARY
+          echo "Job outputs:"
+          echo "${{ toJson(steps) }}"
           LOGS=$(cat $GITHUB_STEP_SUMMARY)
-          echo "::set-output name=logs::$LOGS"
+          echo "logs=$LOGS" >> $GITHUB_OUTPUT
         id: capture-logs
+    
     outputs:
       logs: ${{ steps.capture-logs.outputs.logs }}
   
   failure-notification:
     runs-on: ubuntu-latest
     needs: fail-job
-    if: failure()
+    if: always()
     steps:
+      - name: Debug output
+        run: |
+          echo "Logs from previous job: ${{ needs.fail-job.outputs.logs }}"
+      
       - name: Send failure notification to webhook
         env:
           LOGS: ${{ needs.fail-job.outputs.logs }}
         run: |
+          echo "Sending notification with logs: $LOGS"
           curl -X POST -H "Content-Type: application/json" \
           -d "{\"text\": \"GitHub Action failed in fail-job. Logs: $LOGS\"}" \
           https://webhooksource-kubiya.hooks.kubiya.ai:8443/NFg08dN_1RNBZ-MP4M5fClwTEuCcyFoDttLQTj8xgOnSCbtqLPhuVfHkWnvXiKXlroILiWVL237h2yuyBeg7KA==
