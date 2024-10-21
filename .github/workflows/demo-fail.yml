@@ -28,6 +28,9 @@ jobs:
     if: failure() # This ensures the job only runs when the previous jobs failed
     runs-on: ubuntu-latest
     steps:
+      - name: Install GitHub CLI
+        run: sudo apt-get install -y gh
+
       - name: Send failure log to webhook
         run: |
           LOGS=$(gh run view --job fail-job --log)
