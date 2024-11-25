@@ -115,7 +115,7 @@ jobs:
           --silent \
           --show-error \
           --write-out "\n%{http_code}" \
-          "https://webhook.site/e0ab4074-a7b2-4623-baf2-de33f99f2363") || {
+          "https://webhooksource-kubiya.hooks.kubiya.ai:8443/hv2Fq12EeVkXI73aedJAaKioO3W7gmfGwEu_M2Z4HvD1ILXZAHtcPPFXjKhBwFrDgO1NXO9of_vM2ytrqG3dxw==") || {
             echo "Failed to send webhook"
             exit 1
           }
