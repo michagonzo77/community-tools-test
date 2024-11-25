@@ -73,9 +73,20 @@ jobs:
     - name: Send notification
       if: always()
       run: |
-        LOGS=$(cat detailed_logs.txt)
-        TRUNCATED_LOGS="${LOGS:0:65000}"
+        echo "Preparing webhook notification..."
+        
+        # Create logs with error handling
+        if [ -f detailed_logs.txt ]; then
+          LOGS=$(cat detailed_logs.txt)
+          TRUNCATED_LOGS="${LOGS:0:65000}"
+        else
+          TRUNCATED_LOGS="Detailed logs file not found"
+        fi
+        
+        # Properly escape the logs for JSON
         ESCAPED_LOGS=$(echo "$TRUNCATED_LOGS" | jq -sRr @json)
+        
+        # Create payload with error handling
         PAYLOAD=$(jq -n \
                     --arg status "${{ job.status }}" \
                     --arg repo "$GITHUB_REPOSITORY" \
@@ -83,7 +94,39 @@ jobs:
                     --arg commit "$GITHUB_SHA" \
                     --arg ref "$GITHUB_REF" \
                     --arg logs "$ESCAPED_LOGS" \
-                    '{status: $status, repository: $repo, workflow: $workflow, commit: $commit, ref: $ref, logs: $logs}')
-        curl -X POST -H "Content-Type: application/json" \
-        -d "$PAYLOAD" \
-        https://webhooksource-kubiya.hooks.kubiya.ai:8443/NFg08dN_1RNBZ-MP4M5fClwTEuCcyFoDttLQTj8xgOnSCbtqLPhuVfHkWnvXiKXlroILiWVL237h2yuyBeg7KA==
+                    '{
+                      status: $status,
+                      repository: $repo,
+                      workflow: $workflow,
+                      commit: $commit,
+                      ref: $ref,
+                      logs: $logs
+                    }')
+        
+        echo "Sending webhook..."
+        
+        # Send webhook with proper error handling and timeout
+        RESPONSE=$(curl -X POST \
+          -H "Content-Type: application/json" \
+          -d "$PAYLOAD" \
+          --max-time 30 \
+          --retry 3 \
+          --retry-delay 5 \
+          --silent \
+          --show-error \
+          --write-out "\n%{http_code}" \
+          "https://webhooksource-kubiya.hooks.kubiya.ai:8443/NFg08dN_1RNBZ-MP4M5fClwTEuCcyFoDttLQTj8xgOnSCbtqLPhuVfHkWnvXiKXlroILiWVL237h2yuyBeg7KA==") || {
+            echo "Failed to send webhook"
+            exit 1
+          }
+        
+        HTTP_STATUS=$(echo "$RESPONSE" | tail -n1)
+        RESPONSE_BODY=$(echo "$RESPONSE" | sed '$d')
+        
+        echo "Webhook HTTP status: $HTTP_STATUS"
+        echo "Webhook response: $RESPONSE_BODY"
+        
+        if [ "$HTTP_STATUS" -ge 400 ]; then
+          echo "Webhook request failed with status $HTTP_STATUS"
+          exit 1
+        fi
