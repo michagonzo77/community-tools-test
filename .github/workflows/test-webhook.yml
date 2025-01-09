@@ -1,0 +1,54 @@
+name: Test Webhook Monitor
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test-failures:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python 3.9
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.9
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pytest boto3 flake8
+        
+    - name: Run problematic AWS tool
+      run: |
+        python -c "from aws.aws_tools.tools.s3_problematic import test_problematic_function; test_problematic_function()"
+      
+    - name: Force failure
+      run: exit 1
+      
+    - name: Capture failure details
+      if: failure()
+      run: |
+        {
+          echo "GITHUB_WORKFLOW: $GITHUB_WORKFLOW"
+          echo "GITHUB_EVENT_NAME: $GITHUB_EVENT_NAME"
+          echo "GITHUB_SHA: $GITHUB_SHA"
+          echo "Error occurred in workflow"
+        } > failure_details.txt
+        
+    - name: Send notification on failure
+      if: failure()
+      run: |
+        LOGS=$(cat failure_details.txt)
+        PAYLOAD=$(jq -n \
+                    --arg status "failure" \
+                    --arg repo "$GITHUB_REPOSITORY" \
+                    --arg workflow "$GITHUB_WORKFLOW" \
+                    --arg commit "$GITHUB_SHA" \
+                    --arg logs "$LOGS" \
+                    '{status: $status, repository: $repo, workflow: $workflow, commit: $commit, logs: $logs}')
+        curl -X POST -H "Content-Type: application/json" \
+        -d "$PAYLOAD" \
+        https://webhooksource-kubiya.hooks.kubiya.ai:8443/NFg08dN_1RNBZ-MP4M5fClwTEuCcyFoDttLQTj8xgOnSCbtqLPhuVfHkWnvXiKXlroILiWVL237h2yuyBeg7KA== 
